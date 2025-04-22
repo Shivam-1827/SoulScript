@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios"); // Make sure axios is installed
+const axios = require("axios"); 
 const dbConnect = require("./dbConnect");
 const {Blog, Comment} = require("./db");
 require("dotenv").config();
@@ -12,8 +12,7 @@ app.use(express.json());
 app.use(cors());
 dbConnect();
 
-// Replace OpenAI initialization with Gemini API configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Add this to your .env file
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 // console.log(GEMINI_API_KEY)
 
@@ -25,7 +24,6 @@ app.get("/", (req, res) => {
   res.send("Hi there");
 });
 
-// Create Blog
 app.post("/api/post", async (req, res) => {
   try {
     const { title, image, description, content, author } = req.body;
@@ -66,7 +64,7 @@ app.get("/api/posts", async (req, res) => {
     }
 });
 
-// Get blog by slug + comments
+
 app.get("/api/post/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
@@ -81,7 +79,7 @@ app.get("/api/post/:slug", async (req, res) => {
   }
 });
 
-// Post comment and get AI response using Gemini API
+
 app.post("/api/comment", async (req, res) => {
   try {
     const { blog, name, text } = req.body;
@@ -89,7 +87,6 @@ app.post("/api/comment", async (req, res) => {
       return res.status(400).json({ message: "Missing required field" });
     }
 
-    // Create the comment first
     const comment = await Comment.create({
       name: name || "Anonymous",
       text,
@@ -97,7 +94,6 @@ app.post("/api/comment", async (req, res) => {
     });
 
     try {
-      // Generate AI response using Gemini API
       const response = await axios.post(
         `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
         {
@@ -122,10 +118,8 @@ app.post("/api/comment", async (req, res) => {
         }
       );
 
-      // Extract the AI reply from the Gemini response
       const aiReply = response.data.candidates[0].content.parts[0].text;
 
-      // Push AI response to comment
       comment.responses.push({
         responderName: "SoulScript AI",
         text: aiReply,
@@ -134,12 +128,11 @@ app.post("/api/comment", async (req, res) => {
 
       await comment.save();
       
-      // Get the complete updated comment with responses
       const updatedComment = await Comment.findById(comment._id);
       res.status(201).json(updatedComment);
     } catch (aiError) {
       console.error("AI Response Error:", aiError.response?.data || aiError.message);
-      // Even if AI fails, we still return the comment without AI response
+      
       res.status(201).json(comment);
     }
   } catch (error) {

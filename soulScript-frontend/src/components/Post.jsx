@@ -9,7 +9,7 @@ const Post = () => {
   const [author, setAuthor] = useState("");
 
   const handlePublish = async (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault(); 
 
     try {
       const response = await axios.post("http://localhost:3000/api/post", {

@@ -11,7 +11,7 @@ const Home = () => {
       try {
         setIsLoading(true);
         const response = await axios.get('http://localhost:3000/api/posts');
-        // Sort blogs by newest first (assuming publishedAt field exists)
+        
         const sorted = response.data.sort(
           (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
         );

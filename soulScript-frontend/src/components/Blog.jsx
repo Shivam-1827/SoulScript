@@ -18,7 +18,6 @@ const BlogPost = () => {
       try {
         const res = await axios.get(`http://localhost:3000/api/post/${slug}`);
         setBlog(res.data);
-        // Check if comments exist in the response
         if (res.data.comments) {
           setComments(res.data.comments);
         }
@@ -36,7 +35,6 @@ const BlogPost = () => {
     setIsSubmitting(true);
 
     try {
-      // Create a temporary comment to show immediately
       const tempCommentObj = {
         _id: `temp-${Date.now()}`,
         name: name || "Anonymous",
@@ -46,25 +44,20 @@ const BlogPost = () => {
         isTemp: true
       };
       
-      // Add the temporary comment to the list
       setComments(prevComments => [tempCommentObj, ...prevComments]);
       setTempComment(tempCommentObj);
       
-      // Reset form fields
       setNewComment("");
       setName("");
       
-      // Show AI is thinking
       setAiResponseLoading(true);
       
-      // Send comment to backend
       const response = await axios.post("http://localhost:3000/api/comment", {
         blog: blog._id,
         name: tempCommentObj.name,
         text: tempCommentObj.text
       });
       
-      // Remove temporary comment and add the real one with AI response
       setComments(prevComments => 
         prevComments
           .filter(c => c._id !== tempCommentObj._id)
@@ -78,7 +71,6 @@ const BlogPost = () => {
       console.error("Error submitting comment:", err);
       alert("Failed to submit comment. Please try again.");
       
-      // Remove the temporary comment if there was an error
       if (tempComment) {
         setComments(prevComments => prevComments.filter(c => c._id !== tempComment._id));
         setTempComment(null);
