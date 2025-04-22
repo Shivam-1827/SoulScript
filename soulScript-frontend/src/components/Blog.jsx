@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -9,13 +10,18 @@ const BlogPost = () => {
   const [newComment, setNewComment] = useState("");
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aiResponseLoading, setAiResponseLoading] = useState(false);
+  const [tempComment, setTempComment] = useState(null);
 
   useEffect(() => {
     const fetchBlog = async () => {
       try {
         const res = await axios.get(`http://localhost:3000/api/post/${slug}`);
         setBlog(res.data);
-        setComments(res.data.comments || []);
+        // Check if comments exist in the response
+        if (res.data.comments) {
+          setComments(res.data.comments);
+        }
       } catch (error) {
         console.error("Error fetching blog:", error);
       }
@@ -29,56 +35,56 @@ const BlogPost = () => {
 
     setIsSubmitting(true);
 
-    const commentData = {
-      name: name || "Anonymous",
-      text: newComment,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Add comment to UI immediately
-    setComments([commentData, ...comments]);
-    setNewComment("");
-    setName("");
-
     try {
-      // Send comment to backend
-      await axios.post(`http://localhost:3000/api/comment/${slug}`, commentData);
-
-      // Generate AI response
-      const aiResponse = await axios.post("https://api.openai.com/v1/chat/completions", {
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a helpful assistant replying to blog comments." },
-          { role: "user", content: commentData.text }
-        ],
-      }, {
-        headers: {
-          Authorization: `Bearer YOUR_OPENAI_API_KEY`, // Replace with env variable in production
-          "Content-Type": "application/json"
-        }
-      });
-
-      const aiText = aiResponse.data.choices[0].message.content.trim();
-
-      const updatedComment = {
-        ...commentData,
-        response: aiText
+      // Create a temporary comment to show immediately
+      const tempCommentObj = {
+        _id: `temp-${Date.now()}`,
+        name: name || "Anonymous",
+        text: newComment,
+        createdAt: new Date().toISOString(),
+        responses: [],
+        isTemp: true
       };
-
-      // Update the comment with AI response in UI
-      setComments(prev => {
-        const [first, ...rest] = prev;
-        return [updatedComment, ...rest];
+      
+      // Add the temporary comment to the list
+      setComments(prevComments => [tempCommentObj, ...prevComments]);
+      setTempComment(tempCommentObj);
+      
+      // Reset form fields
+      setNewComment("");
+      setName("");
+      
+      // Show AI is thinking
+      setAiResponseLoading(true);
+      
+      // Send comment to backend
+      const response = await axios.post("http://localhost:3000/api/comment", {
+        blog: blog._id,
+        name: tempCommentObj.name,
+        text: tempCommentObj.text
       });
-
-      // Optional: Save AI response to backend
-      await axios.post(`http://localhost:3000/api/comment/${slug}/response`, {
-        commentText: commentData.text,
-        response: aiText,
-      });
-
+      
+      // Remove temporary comment and add the real one with AI response
+      setComments(prevComments => 
+        prevComments
+          .filter(c => c._id !== tempCommentObj._id)
+          .concat([response.data])
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      );
+      
+      setTempComment(null);
+      setAiResponseLoading(false);
     } catch (err) {
-      console.error("Error submitting comment or generating AI response:", err);
+      console.error("Error submitting comment:", err);
+      alert("Failed to submit comment. Please try again.");
+      
+      // Remove the temporary comment if there was an error
+      if (tempComment) {
+        setComments(prevComments => prevComments.filter(c => c._id !== tempComment._id));
+        setTempComment(null);
+      }
+      
+      setAiResponseLoading(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -89,12 +95,14 @@ const BlogPost = () => {
   return (
     <div className="bg-white min-h-screen text-gray-800">
       {/* Header */}
-      <header className="bg-indigo-600 text-white py-4 shadow">
-        <div className="max-w-5xl mx-auto px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">SoulScript</h1>
-          <a href="/" className="text-sm underline hover:text-gray-200">Back to Home</a>
-        </div>
-      </header>
+      <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-purple-700">SoulScript</h1>
+        <Link 
+          to="/"
+          className="bg-purple-700 text-white px-4 py-2 rounded hover:bg-purple-800 transition">
+          Back to Home
+        </Link>
+      </nav>        
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 py-10">
@@ -103,7 +111,7 @@ const BlogPost = () => {
           <h2 className="text-4xl font-bold">{blog.title}</h2>
           <p className="text-sm text-gray-600 mt-2">
             By <span className="font-semibold">{blog.author}</span> •{" "}
-            {new Date(blog.createdAt).toLocaleDateString()}
+            {new Date(blog.publishedAt).toLocaleDateString()}
           </p>
         </div>
 
@@ -121,16 +129,7 @@ const BlogPost = () => {
           dangerouslySetInnerHTML={{ __html: blog.content }}
         />
 
-        {/* Social Sharing */}
-        <div className="mb-10">
-          <p className="text-sm text-gray-600">Share this post:</p>
-          <div className="flex space-x-4 mt-2">
-            <a href="#" className="text-blue-500 hover:underline">Twitter</a>
-            <a href="#" className="text-blue-700 hover:underline">Facebook</a>
-            <a href="#" className="text-green-600 hover:underline">WhatsApp</a>
-          </div>
-        </div>
-
+     
         {/* Comments Section */}
         <section>
           <h3 className="text-2xl font-semibold mb-4">Comments</h3>
@@ -168,19 +167,36 @@ const BlogPost = () => {
               <p className="text-gray-500">No comments yet. Be the first!</p>
             ) : (
               comments.map((comment, index) => (
-                <div key={index} className="border p-4 rounded-md shadow-sm">
+                <div key={comment._id || index} className="border p-4 rounded-md shadow-sm">
                   <div className="text-sm font-medium">{comment.name}</div>
                   <div className="text-xs text-gray-400 mb-2">
                     {new Date(comment.createdAt).toLocaleString()}
                   </div>
                   <p>{comment.text}</p>
 
-                  {comment.response && (
-                    <div className="mt-4 pl-4 border-l-2 border-blue-300 bg-blue-50 text-sm rounded-md">
-                      <strong className="text-blue-800">AI Response:</strong>
-                      <p>{comment.response}</p>
+                  {/* AI Response Loading Indicator */}
+                  {comment.isTemp && aiResponseLoading && (
+                    <div className="mt-4 pl-4 border-l-2 border-blue-300 bg-blue-50 text-sm rounded-md p-3">
+                      <div className="flex items-center">
+                        <span className="font-semibold text-blue-800">SoulScript AI:</span>
+                        <div className="ml-2 flex space-x-1">
+                          <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce"></div>
+                          <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                          <div className="h-2 w-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                        </div>
+                      </div>
                     </div>
                   )}
+
+                  {/* Display AI responses if available */}
+                  {comment.responses && comment.responses.length > 0 && 
+                    comment.responses.map((response, idx) => (
+                      <div key={idx} className="mt-4 pl-4 border-l-2 border-blue-300 bg-blue-50 text-sm rounded-md p-3">
+                        <strong className="text-blue-800">{response.responderName || "SoulScript AI"}:</strong>
+                        <p>{response.text}</p>
+                      </div>
+                    ))
+                  }
                 </div>
               ))
             )}

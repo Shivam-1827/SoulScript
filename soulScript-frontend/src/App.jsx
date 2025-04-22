@@ -1,22 +1,19 @@
-import { useState } from 'react'
-
-import {BrowserRouter as Router, Routes, Route} from 'react-router-dom'
-import Home from './components/Home'
-import Blog from './components/Blog'  
-import Post from './components/Post'
-
-
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './components/Home';
+import BlogPost from './components/Blog';
+import Post from './components/Post';
 
 function App() {
-  return(
+  return (
     <Router>
       <Routes>
-        <Route path='/' element={<Home/>}></Route>
-        <Route path='/blog:slug' element={<Blog/>}></Route>
-        <Route path='/post' element={<Post/>}></Route>
+        <Route path="/" element={<Home />} />
+        <Route path="/post" element={<Post />} />
+        {/* This is the important route - make sure it matches the link in Home.jsx */}
+        <Route path="/blog/:slug" element={<BlogPost />} />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;
