@@ -4,7 +4,8 @@ SoulScript is a modern, full-stack blog platform that features AI-powered commen
 
 Live Demo: [https://soulscript-iota.vercel.app/](https://soulscript-iota.vercel.app/)
 
-![SoulScript Screenshot](https://i.imgur.com/your-screenshot-url.png) <!-- Replace with an actual screenshot of your application -->
+![image](https://github.com/user-attachments/assets/e0b04369-c3ab-4894-9a8a-5775b56a2a54)
+
 
 ## Features
 
@@ -99,10 +100,4 @@ The application is deployed on Vercel at [https://soulscript-iota.vercel.app/](h
 - Search functionality
 - Categories and tags
 
-## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
